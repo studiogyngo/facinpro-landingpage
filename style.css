@@ -272,7 +272,18 @@ button, input, select, textarea {
   gap: 16px;
 }
 
-.header__logo img { height: 44px; width: auto; }
+.header__logo {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.header__logo-img {
+  height: 52px;
+  width: auto;
+}
+
+.header__logo-img--white { display: none; }
 
 .nav__list {
   display: flex;
@@ -283,7 +294,7 @@ button, input, select, textarea {
   padding: 8px 14px;
   font-family: var(--font-primary);
   font-weight: 500;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   border-radius: 8px;
   color: var(--gray-800);
 }
@@ -1574,17 +1585,29 @@ button, input, select, textarea {
   .countdown__item span { font-size: 1.75rem; }
 }
 
-/* Header sobre hero — logo clara no topo */
-.header:not(.scrolled) .header__logo img {
-  filter: brightness(0) invert(1);
+/* Header sobre hero — logo e menu claros no topo */
+.header:not(.scrolled) .header__logo-img--color { display: none; }
+.header:not(.scrolled) .header__logo-img--white { display: block; }
+
+.header:not(.scrolled) .nav__link {
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
 }
 
-.header.scrolled .header__logo img {
-  filter: none;
+.header:not(.scrolled) .nav__link:hover,
+.header:not(.scrolled) .nav__link.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--white);
 }
 
-.header:not(.scrolled) .nav__link { color: rgba(255, 255, 255, 0.95); }
-.header:not(.scrolled) .nav__link:hover { background: rgba(255, 255, 255, 0.15); color: var(--white); }
+.header:not(.scrolled) .nav__link--highlight {
+  color: var(--green-light);
+}
+
+.header:not(.scrolled) .nav__link--highlight:hover,
+.header:not(.scrolled) .nav__link--highlight.active {
+  color: var(--green-light);
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
