@@ -367,6 +367,7 @@ button, input, select, textarea {
   grid-template-columns: 1fr 1fr;
   gap: 48px;
   align-items: center;
+  margin-top: 50px;
 }
 
 .hero__title {
