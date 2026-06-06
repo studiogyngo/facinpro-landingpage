@@ -6,9 +6,10 @@
 (function () {
   'use strict';
 
-  /* ---------- Utilitários ---------- */
   const $ = (sel, ctx = document) => ctx.querySelector(sel);
   const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
+
+  const EXIT_POPUP_KEY = 'facinpro_exit_popup_shown';
 
   /* ---------- Ícones SVG para cards de áreas ---------- */
   const AREA_ICONS = {
@@ -39,7 +40,6 @@
     });
   }
 
-  /* ---------- Barra de progresso de leitura ---------- */
   function initReadProgress() {
     const bar = $('#readProgress');
     if (!bar) return;
@@ -56,7 +56,6 @@
     );
   }
 
-  /* ---------- Header fixo + menu mobile ---------- */
   function initHeader() {
     const header = $('#header');
     const toggle = $('#navToggle');
@@ -85,7 +84,6 @@
       });
     });
 
-    /* Destaque do link ativo por seção */
     const sections = $$('section[id]');
     const navLinks = $$('.nav__link');
 
@@ -105,7 +103,6 @@
     );
   }
 
-  /* ---------- Reveal ao scroll ---------- */
   function initReveal() {
     const reveals = $$('.reveal');
     if (!reveals.length) return;
@@ -125,7 +122,6 @@
     reveals.forEach((el) => observer.observe(el));
   }
 
-  /* ---------- Contadores animados (salários e stats) ---------- */
   function animateCounter(el, target, duration = 1800) {
     const start = performance.now();
     const from = 0;
@@ -160,7 +156,6 @@
     counters.forEach((c) => observer.observe(c));
   }
 
-  /* ---------- Countdown PROUNI — 1º de Agosto de 2026 ---------- */
   function initProuniCountdown() {
     const target = new Date('2026-08-01T00:00:00-03:00').getTime();
     const daysEl = $('#cd-days');
@@ -193,7 +188,6 @@
     setInterval(tick, 1000);
   }
 
-  /* ---------- Captura de UTMs e parâmetros de ads ---------- */
   function initUtmCapture() {
     const params = new URLSearchParams(window.location.search);
     const fields = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'gclid', 'fbclid'];
@@ -211,7 +205,6 @@
       if (input) input.value = stored[key];
     });
 
-    /* Objeto global para integração CRM / GTM */
     window.FACINPRO_LEAD_CONTEXT = {
       page: 'biomedicina-landing',
       course: 'Biomedicina',
@@ -220,13 +213,11 @@
     };
   }
 
-  /* ---------- Formulário — validação e envio (SpotForm-ready) ---------- */
   function initLeadForm() {
     const form = $('#leadForm');
     const toast = $('#formToast');
     if (!form) return;
 
-    /* Máscara simples WhatsApp */
     const whatsapp = $('#whatsapp');
     whatsapp?.addEventListener('input', (e) => {
       let v = e.target.value.replace(/\D/g, '').slice(0, 11);
@@ -250,7 +241,6 @@
 
       const payload = Object.fromEntries(new FormData(form).entries());
 
-      /* Evento para Google Ads / Meta Pixel — disparar após configurar IDs */
       window.dataLayer = window.dataLayer || [];
       window.dataLayer.push({
         event: 'lead_submit',
@@ -259,28 +249,21 @@
         ...window.FACINPRO_LEAD_CONTEXT?.utm
       });
 
-      /*
-       * Integração SpotForm (futuro):
-       * fetch('https://api.spotform.com.br/...', { method: 'POST', body: JSON.stringify(payload) })
-       */
       console.info('[FACINPRO] Lead capturado (modo demo):', payload);
 
       toast?.removeAttribute('hidden');
       toast?.classList.add('show');
       form.reset();
+      sessionStorage.setItem(EXIT_POPUP_KEY, '1');
 
-      /* Restaurar UTMs após reset */
       initUtmCapture();
 
       setTimeout(() => {
         toast?.classList.remove('show');
       }, 5000);
-
-      /* fbq('track', 'Lead'); gtag('event', 'conversion', {...}); */
     });
   }
 
-  /* ---------- CTAs com pré-seleção de forma de ingresso ---------- */
   function initCtaPresets() {
     const ingressoSelect = $('#forma_ingresso');
 
@@ -302,7 +285,6 @@
     });
   }
 
-  /* ---------- Carrossel estilo Reels ---------- */
   function initReelsCarousel() {
     const track = $('#reelsTrack');
     const prev = $('#reelsPrev');
@@ -322,7 +304,7 @@
       dotsWrap?.appendChild(dot);
     });
 
-    const dots = $$('.testimonials-slider__dots button, #reelsDots button');
+    const dots = $$('#reelsDots button');
 
     function scrollToIndex(i) {
       index = Math.max(0, Math.min(i, cards.length - 1));
@@ -353,14 +335,12 @@
       { passive: true }
     );
 
-    /* Auto-advance suave */
     setInterval(() => {
       if (document.hidden) return;
       scrollToIndex(index + 1 >= cards.length ? 0 : index + 1);
     }, 6000);
   }
 
-  /* ---------- Urgência — vagas dinâmicas (efeito social) ---------- */
   function initUrgency() {
     const el = $('#vagasRestantes');
     if (!el) return;
@@ -385,28 +365,107 @@
     observer.observe(el);
   }
 
-  /* ---------- Vídeo placeholder ---------- */
+  /* ---------- Popup: 1x no final da página + 1x ao tentar fechar o navegador ---------- */
+  function initExitPopup() {
+    const popup = $('#exitPopup');
+    if (!popup) return;
+
+    const form = $('#leadForm');
+    const panel = popup.querySelector('.exit-popup__panel');
+
+    const BOTTOM_THRESHOLD = 60;
+
+    const alreadySubmitted = () => sessionStorage.getItem(EXIT_POPUP_KEY) === '1';
+
+    let reachedBottom = false;
+    let bottomPopupShown = false;
+    let exitIntentShown = false;
+
+    const isNearBottom = () => {
+      const doc = document.documentElement;
+      return window.innerHeight + window.scrollY >= doc.scrollHeight - BOTTOM_THRESHOLD;
+    };
+
+    const close = () => {
+      popup.setAttribute('hidden', '');
+      document.body.classList.remove('exit-popup-open');
+    };
+
+    const open = () => {
+      if (alreadySubmitted()) return;
+      if (!popup.hasAttribute('hidden')) return;
+
+      popup.removeAttribute('hidden');
+      document.body.classList.add('exit-popup-open');
+
+      if (panel) {
+        panel.style.animation = 'none';
+        void panel.offsetHeight;
+        panel.style.animation = '';
+      }
+    };
+
+    $('#exitPopupClose')?.addEventListener('click', close);
+    $('#exitPopupBackdrop')?.addEventListener('click', close);
+    $('#exitPopupDismiss')?.addEventListener('click', close);
+    $('#exitPopupCta')?.addEventListener('click', close);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !popup.hasAttribute('hidden')) close();
+    });
+
+    /* Uma única vez ao chegar no final da página */
+    window.addEventListener(
+      'scroll',
+      () => {
+        if (alreadySubmitted() || bottomPopupShown) return;
+
+        if (isNearBottom()) {
+          reachedBottom = true;
+          bottomPopupShown = true;
+          open();
+        }
+      },
+      { passive: true }
+    );
+
+    /* Uma única vez ao tentar fechar aba/janela (cursor sai pelo topo) */
+    document.addEventListener('mouseout', (e) => {
+      if (alreadySubmitted() || exitIntentShown) return;
+      if (!reachedBottom) return;
+      if (e.relatedTarget || e.clientY > 15) return;
+
+      exitIntentShown = true;
+      open();
+    });
+
+    form?.addEventListener(
+      'submit',
+      () => {
+        sessionStorage.setItem(EXIT_POPUP_KEY, '1');
+        close();
+      },
+      { capture: true }
+    );
+  }
+
   function initVideoPlaceholder() {
     $('#playVideo')?.addEventListener('click', () => {
       alert('Substitua o bloco de vídeo pelo embed do YouTube institucional da FACINPRO.');
     });
-
   }
 
-  /* ---------- Ano no footer ---------- */
   function initYear() {
     const y = $('#year');
     if (y) y.textContent = new Date().getFullYear();
   }
 
-  /* ---------- Hero entrada animada ---------- */
   function initHeroEntrance() {
     requestAnimationFrame(() => {
       $$('.hero .reveal').forEach((el) => el.classList.add('visible'));
     });
   }
 
-  /* ---------- Inicialização ---------- */
   function init() {
     initAreaIcons();
     initReadProgress();
@@ -419,6 +478,7 @@
     initCtaPresets();
     initReelsCarousel();
     initUrgency();
+    initExitPopup();
     initVideoPlaceholder();
     initYear();
     initHeroEntrance();
